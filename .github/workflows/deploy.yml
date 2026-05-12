@@ -9,6 +9,8 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE_NAME: api-chatbot-whitelabel-notificaciones
   REGION: us-central1
+  # Repositorio moderno en Artifact Registry
+  REPO_NAME: cloud-run-source-deploy
   # Esta es la SA que usará la API para Sheets (Runtime)
   RUNTIME_SA: sa-chatbot-whitelabel@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
 
@@ -23,27 +25,35 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          # Aquí va el JSON de la SA de CI/CD (la que creaste para desplegar)
+          # JSON de la SA de CI/CD (GCP_SA_KEY_DEPLOY)
           credentials_json: '${{ secrets.GCP_SA_KEY_DEPLOY }}'
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Authorize Docker
-        run: gcloud auth configure-docker
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
       - name: Build and Push Container
         run: |-
-          docker build -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
-          docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          # 1. Crear el repositorio si no existe (Automatización total)
+          gcloud artifacts repositories create ${{ env.REPO_NAME }} \
+            --repository-format=docker \
+            --location=${{ env.REGION }} \
+            --quiet || true
+
+          # 2. Construir la imagen con la ruta moderna de Artifact Registry
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          
+          # 3. Empujar la imagen
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
 
       - name: Deploy to Cloud Run
         run: |-
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --service-account ${{ env.RUNTIME_SA }} \
             --allow-unauthenticated \
             --platform managed \
             --quiet
-            
