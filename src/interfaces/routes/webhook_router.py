@@ -13,6 +13,7 @@ def _get_use_case() -> ProcessWebhook:
 
 
 @router.post("/webhook")
+@router.post("/")
 async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
     payload = await request.json()
     use_case = _get_use_case()
