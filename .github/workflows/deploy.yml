@@ -56,4 +56,6 @@ jobs:
             --service-account ${{ env.RUNTIME_SA }} \
             --allow-unauthenticated \
             --platform managed \
+            --set-env-vars "GOOGLE_SPREADSHEET_ID=1HTSVjhWc3iqs6uViCOQd_HaMT6Jjy76aYBWikVnsqDI,APP_ENV=production" \
+            --set-secrets "BUHO_API_TOKEN=shipstream_api_token:latest" \
             --quiet
