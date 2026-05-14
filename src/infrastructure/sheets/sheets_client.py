@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -58,7 +59,7 @@ class SheetsClient:
                     all_keys.append(k)
 
         logger.info("Keys to write: %s", all_keys)
-        headers = self._ensure_headers(all_keys)
+        headers = await asyncio.to_thread(self._ensure_headers, all_keys)
         logger.info("Final headers: %s", headers)
 
         values = [
@@ -66,11 +67,13 @@ class SheetsClient:
             for row in rows
         ]
 
-        result = self._sheet().values().append(
-            spreadsheetId=self._spreadsheet_id,
-            range=f"{SHEET_NAME}!A1",
-            valueInputOption="RAW",
-            insertDataOption="INSERT_ROWS",
-            body={"values": values},
-        ).execute()
+        result = await asyncio.to_thread(
+            lambda: self._sheet().values().append(
+                spreadsheetId=self._spreadsheet_id,
+                range=f"{SHEET_NAME}!A1",
+                valueInputOption="RAW",
+                insertDataOption="INSERT_ROWS",
+                body={"values": values},
+            ).execute()
+        )
         logger.info("Sheets append result: %s", result)
