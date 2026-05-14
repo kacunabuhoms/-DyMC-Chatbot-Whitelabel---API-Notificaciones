@@ -2,8 +2,6 @@ import logging
 from typing import Any
 
 import google.auth
-import httplib2
-from google.auth.transport.httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -17,8 +15,7 @@ class SheetsClient:
     def __init__(self, spreadsheet_id: str) -> None:
         self._spreadsheet_id = spreadsheet_id
         credentials, _ = google.auth.default(scopes=SCOPES)
-        authed_http = AuthorizedHttp(credentials, http=httplib2.Http(timeout=30))
-        self._service = build("sheets", "v4", http=authed_http)
+        self._service = build("sheets", "v4", credentials=credentials)
 
     def _sheet(self):
         return self._service.spreadsheets()
