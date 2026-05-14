@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     google_spreadsheet_id: str
     app_env: str = "development"
 
+    buho_api_token: str = ""
+
     # Fase 2
     meta_token: str = ""
     meta_phone_number_id: str = ""

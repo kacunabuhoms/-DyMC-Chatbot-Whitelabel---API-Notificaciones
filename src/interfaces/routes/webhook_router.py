@@ -3,13 +3,15 @@ from fastapi import APIRouter, BackgroundTasks, Request
 from config.settings import settings
 from src.application.use_cases.process_webhook import ProcessWebhook
 from src.infrastructure.sheets.sheets_client import SheetsClient
+from src.infrastructure.shipstream.shipstream_client import ShipstreamClient
 
 router = APIRouter()
 
 
 def _get_use_case() -> ProcessWebhook:
-    client = SheetsClient(settings.google_spreadsheet_id)
-    return ProcessWebhook(client)
+    sheets = SheetsClient(settings.google_spreadsheet_id)
+    shipstream = ShipstreamClient(settings.buho_api_token)
+    return ProcessWebhook(sheets, shipstream)
 
 
 @router.post("/webhook")
