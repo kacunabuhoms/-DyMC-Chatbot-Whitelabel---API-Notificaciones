@@ -17,13 +17,12 @@ class ProcessWebhook:
         self._shipstream = shipstream_client
 
     async def execute(self, payload: dict[str, Any]) -> None:
+        raw_json = json.dumps(payload, ensure_ascii=False)
+        fecha = datetime.now(ZoneInfo("America/Monterrey")).strftime("%Y-%m-%d %H:%M:%S")
+        order_ref: str = payload.get("order_ref", "")
+        base_row = flatten({k: v for k, v in payload.items() if not isinstance(v, list)})
+
         try:
-            raw_json = json.dumps(payload, ensure_ascii=False)
-            fecha = datetime.now(ZoneInfo("America/Monterrey")).strftime("%Y-%m-%d %H:%M:%S")
-            order_ref: str = payload.get("order_ref", "")
-
-            base_row = flatten({k: v for k, v in payload.items() if not isinstance(v, list)})
-
             shipments_list: list[dict[str, Any]] = payload.get("shipments", [])
             shipments_by_tracking: dict[str, dict[str, Any]] = {
                 s["tracking_number"]: flatten(s, "shipments")
@@ -43,6 +42,7 @@ class ProcessWebhook:
                 rows = [
                     {
                         "raw_json": raw_json,
+                        "status": "Ok",
                         "fecha": fecha,
                         **base_row,
                         **shipments_by_tracking.get(pkg.get("shipmentpackage.tracking_number", ""), {}),
@@ -53,11 +53,19 @@ class ProcessWebhook:
                 ]
             else:
                 rows = [
-                    {"raw_json": raw_json, "fecha": fecha, **row, **address}
+                    {"raw_json": raw_json, "status": "Ok", "fecha": fecha, **row, **address}
                     for row in expand_rows(payload)
                 ]
 
             logger.info("Payload expanded into %d row(s)", len(rows))
-            await self._sheets.append_rows(rows)
-        except Exception:
+
+        except Exception as exc:
             logger.exception("Failed to process webhook payload")
+            error_status = f"Error: {type(exc).__name__}: {exc}"
+            rows = [
+                {"raw_json": raw_json, "status": error_status, "fecha": fecha, **row}
+                for row in expand_rows(payload)
+            ]
+            logger.info("Saving %d fallback row(s) after error", len(rows))
+
+        await self._sheets.append_rows(rows)
