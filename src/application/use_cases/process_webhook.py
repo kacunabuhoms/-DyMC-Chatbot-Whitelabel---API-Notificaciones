@@ -33,10 +33,11 @@ class ProcessWebhook:
             enrichment = (
                 await self._shipstream.get_order_data(order_ref)
                 if order_ref
-                else {"packages": [], "address": {}}
+                else {"packages": [], "address": {}, "raw_shipstream": ""}
             )
             packages: list[dict[str, Any]] = enrichment["packages"]
             address: dict[str, Any] = enrichment["address"]
+            raw_shipstream: str = enrichment.get("raw_shipstream", "")
 
             if packages:
                 rows = [
@@ -44,6 +45,7 @@ class ProcessWebhook:
                         "raw_json": raw_json,
                         "status": "Ok",
                         "fecha": fecha,
+                        "shipstream_raw": raw_shipstream,
                         **base_row,
                         **shipments_by_tracking.get(pkg.get("shipmentpackage.tracking_number", ""), {}),
                         **address,
@@ -53,7 +55,7 @@ class ProcessWebhook:
                 ]
             else:
                 rows = [
-                    {"raw_json": raw_json, "status": "Ok", "fecha": fecha, **row, **address}
+                    {"raw_json": raw_json, "status": "Ok", "fecha": fecha, "shipstream_raw": raw_shipstream, **row, **address}
                     for row in expand_rows(payload)
                 ]
 

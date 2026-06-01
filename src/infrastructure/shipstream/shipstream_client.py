@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any
 
@@ -47,25 +48,31 @@ class ShipstreamClient:
                 data = response.json()
         except Exception:
             logger.exception("Shipstream API call failed for order_ref=%s", order_ref)
-            return {"packages": [], "address": {}}
+            return {"packages": [], "address": {}, "raw_shipstream": ""}
 
-        included = data.get("included", {})
-
-        raw_packages = included.get("ShipmentPackage", [])
-        packages = [
-            {f"shipmentpackage.{f}": pkg.get(f) for f in _PACKAGE_FIELDS}
-            for pkg in raw_packages
-        ]
-
-        raw_addresses = included.get("OrderAddress", [])
+        raw_shipstream = json.dumps(data, ensure_ascii=False)
+        packages: list[dict[str, Any]] = []
         address: dict[str, Any] = {}
-        if raw_addresses:
-            addr = raw_addresses[0]
-            address = {f"orderaddress.{f}": addr.get(f) for f in _ADDRESS_FIELDS}
+
+        try:
+            included = data.get("included", {})
+
+            raw_packages = included.get("ShipmentPackage", [])
+            packages = [
+                {f"shipmentpackage.{f}": pkg.get(f) for f in _PACKAGE_FIELDS}
+                for pkg in raw_packages
+            ]
+
+            raw_addresses = included.get("OrderAddress", [])
+            if raw_addresses:
+                addr = raw_addresses[0]
+                address = {f"orderaddress.{f}": addr.get(f) for f in _ADDRESS_FIELDS}
+        except Exception:
+            logger.exception("Failed to parse Shipstream response for order_ref=%s", order_ref)
 
         logger.info(
             "Shipstream returned %d package(s) for order_ref=%s",
             len(packages),
             order_ref,
         )
-        return {"packages": packages, "address": address}
+        return {"packages": packages, "address": address, "raw_shipstream": raw_shipstream}
