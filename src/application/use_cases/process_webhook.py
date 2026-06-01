@@ -19,7 +19,7 @@ class ProcessWebhook:
     async def execute(self, payload: dict[str, Any]) -> None:
         raw_json = json.dumps(payload, ensure_ascii=False)
         fecha = datetime.now(ZoneInfo("America/Monterrey")).strftime("%Y-%m-%d %H:%M:%S")
-        order_ref: str = payload.get("order_ref", "")
+        order_ref: str = payload.get("order_id", "")
         base_row = flatten({k: v for k, v in payload.items() if not isinstance(v, list)})
 
         try:
