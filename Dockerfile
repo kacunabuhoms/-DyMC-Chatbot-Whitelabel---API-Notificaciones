@@ -17,4 +17,4 @@ COPY . .
 
 # 5. Ejecutar con Uvicorn
 # Importante: usamos src.interfaces.main:app porque así está en tu estructura
-CMD ["uvicorn", "src.interfaces.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
