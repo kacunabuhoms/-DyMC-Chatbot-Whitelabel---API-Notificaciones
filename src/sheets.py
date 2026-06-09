@@ -9,12 +9,13 @@ logger = logging.getLogger(__name__)
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SHEET_NAME = "E1 - Raw json"
 
+_credentials, _ = google.auth.default(scopes=SCOPES)
+_service = build("sheets", "v4", credentials=_credentials, cache_discovery=False)
+
 
 def _append(spreadsheet_id: str, raw_json: str) -> None:
-    credentials, _ = google.auth.default(scopes=SCOPES)
-    service = build("sheets", "v4", credentials=credentials)
     result = (
-        service.spreadsheets()
+        _service.spreadsheets()
         .values()
         .append(
             spreadsheetId=spreadsheet_id,
